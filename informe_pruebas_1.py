@@ -11,17 +11,17 @@ df = pd.read_excel('C:/Proyectos/infDef_python/informes_defender/informe_modific
 grupo_correo = df.groupby('correo')
 for correo, grupo in grupo_correo:
     usuario = grupo.iloc[0]['usuario']
-    datos_tabla = grupo[['VulnerabilitySeverityLevel', 'SoftwareName', 'RecommendedSecurityUpdate']]
+    datos_tabla = grupo[['VulnerabilitySeverityLevel', 'RegistryDeviceTag', 'RecommendedSecurityUpdate']]
     tabla = tabulate(datos_tabla, headers=['Urgencia', 'Aplicacion', 'Recomendacion'], tablefmt='orgtbl')
 
     # Construir el cuerpo del correo
     cuerpo_correo = f"Estimado {usuario}, detectamos que su equipo tiene los siguientes problemas de updates:\n\n{tabla}"
 
-    # Enviar el correo
-    servidor_smtp = 'smtp.gmail.com'  # Cambia esto según tu proveedor de correo
-    puerto_smtp = 587  # Cambia esto según tu proveedor de correo
-    remitente = 'neorisp@gmail.com'  # Cambia esto por tu dirección de correo electrónico
-    password = 'hrwzhgivekxmibir'  # Cambia esto por tu contraseña de correo electrónico
+    # Configurar los detalles del correo saliente
+    remitente = 'tu_correo@tudominio.com'  # Cambia esto por tu dirección de correo electrónico
+    password = 'tu_contraseña'  # Cambia esto por tu contraseña de correo electrónico
+    servidor_smtp = 'smtp.office365.com'  # Servidor SMTP de Office 365
+    puerto_smtp = 587  # Puerto SMTP de Office 365
 
     destinatario = correo
 
@@ -41,16 +41,3 @@ for correo, grupo in grupo_correo:
         servidor.send_message(mensaje)
 
     print(f"Correo enviado a: {destinatario}")
-
-
-    '''
-    mensaje = f"Subject: Problemas de updates en tu equipo\n\n{cuerpo_correo}"
-
-    with smtplib.SMTP(servidor_smtp, puerto_smtp) as servidor:
-        servidor.starttls()
-        servidor.login(remitente, password)
-        servidor.sendmail(remitente, destinatario, mensaje)
-
-    print(f"Correo enviado a: {destinatario}")
-'''
-
