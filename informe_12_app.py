@@ -1,19 +1,20 @@
 import pandas as pd
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os.path
 import tkinter as tk
 from tkinter import ttk
 from tkinter import scrolledtext
-from email.mime.image import MIMEImage
-from tabulate import tabulate
+import win32com.client as win32
+from tabulate import tabulate  # Agregar esta línea para importar la función tabulate
+
+# El resto del código se mantiene igual
+# ...
+
 
 # Obtener la ruta del directorio actual
 directorio_actual = os.getcwd()
 
 # Construir la ruta relativa al archivo
-ruta_archivo = os.path.join(directorio_actual, 'informe_modificado.xlsx')
+ruta_archivo = os.path.join(directorio_actual, 'Reporte_IT_Pruebas.xlsx')
 
 # Construir la ruta completa a la imagen neorisIT.jpg en la carpeta raíz del script
 ruta_imagen = os.path.join(directorio_actual, 'neorisIT.jpg')
@@ -37,7 +38,7 @@ def ver_informe():
         return
 
     df = pd.read_excel(ruta_archivo)
-    grupo_correo = df.groupby('correo')
+    grupo_correo = df.groupby('mail')
     resumen = {}
 
     for correo, grupo in grupo_correo:
@@ -69,45 +70,29 @@ def enviar_correos():
         return
 
     df = pd.read_excel(ruta_archivo)
-    servidor_smtp = 'smtp.gmail.com'  # Cambia esto según tu proveedor de correo
-    puerto_smtp = 587  # Cambia esto según tu proveedor de correo
-    remitente = 'neorisp@gmail.com'  # Cambia esto por tu dirección de correo electrónico
-    password = 'hrwzhgivekxmibir'  # Cambia esto por tu contraseña de correo electrónico
+    remitente = 'tu_cuenta@tu_empresa.com'  # Cambiar por la dirección de correo electrónico del remitente
 
-    grupo_correo = df.groupby('correo')
+    grupo_correo = df.groupby('mail')
     for correo, grupo in grupo_correo:
         usuario = correo.split('@')[0] + '@neoris.com'
         datos_tabla = grupo[['VulnerabilitySeverityLevel', 'SoftwareName', 'RecommendedSecurityUpdate']]
         tabla_html = tabulate(datos_tabla, headers='keys', tablefmt='html')
 
-        # Leer el contenido del archivo correo2.html
-        with open('correo2.html', 'r', encoding='utf-8') as archivo_html:
-            contenido_html = archivo_html.read()
+        outlook = win32.Dispatch('outlook.application')
+        mensaje = outlook.CreateItem(0)  # 0 significa un correo nuevo
 
-        # Incorporar el contenido del informe detallado en el HTML
-        contenido_html = contenido_html.replace('Detalle de la notificación', tabla_html)
-        contenido_html = contenido_html.replace('<img width=625 height=278 style=\'width:6.5104in;height:2.8958in\' id="Content_x0020_Placeholder_x0020_4" src="cid:image001.jpg@01D9BFE3.7A905120"></span>', '<img width=625 height=278 style=\'width:6.5104in;height:2.8958in\' id="Content_x0020_Placeholder_x0020_4" src="cid:neorisIT.jpg">')
+        mensaje.To = correo
+        mensaje.Subject = 'Problemas de updates en tu equipo'
 
-        # Crear el objeto MIMEMultipart para el correo
-        mensaje = MIMEMultipart()
-        mensaje['From'] = remitente
-        mensaje['To'] = correo
-        mensaje['Subject'] = 'Notificacion Defender'
-
-        # Agregar el cuerpo del correo en formato HTML al objeto MIMEText
-        mensaje.attach(MIMEText(contenido_html, 'html'))
+        # Cuerpo del correo en formato HTML
+        contenido_html = f'<html><body><p>Detalle de la notificación:</p>{tabla_html}</body></html>'
+        mensaje.HTMLBody = contenido_html
 
         # Agregar la imagen adjunta
-        with open(ruta_imagen, 'rb') as img_file:
-            imagen_adjunta = MIMEImage(img_file.read(), name=os.path.basename(ruta_imagen))
-        imagen_adjunta.add_header('Content-ID', '<neorisIT.jpg>')
-        mensaje.attach(imagen_adjunta)
+        mensaje.Attachments.Add(ruta_imagen)
 
-        # Enviar el correo utilizando el servidor SMTP de Office 365
-        with smtplib.SMTP(servidor_smtp, puerto_smtp) as servidor:
-            servidor.starttls()
-            servidor.login(remitente, password)
-            servidor.send_message(mensaje)
+        # Enviar el correo
+        mensaje.Send()
 
         print(f"Correo enviado a: {correo}")
 
