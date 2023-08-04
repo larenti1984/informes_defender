@@ -17,7 +17,7 @@ directorio_actual = os.getcwd()
 ruta_archivo = os.path.join(directorio_actual, 'Reporte_IT_Pruebas.xlsx')
 
 # Construir la ruta completa a la imagen neorisIT.jpg en la carpeta raíz del script
-ruta_imagen = os.path.join(directorio_actual, 'neorisIT.jpg')
+ruta_imagen = os.path.join(directorio_actual, 'image001.jpg')
 
 def verificar_archivo():
     if not os.path.isfile(ruta_archivo):
@@ -65,6 +65,8 @@ def ver_informe():
     scroll_y.config(command=txt_informe.yview)
     scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
 
+# Resto del código...
+
 def enviar_correos():
     if not verificar_archivo():
         return
@@ -78,14 +80,16 @@ def enviar_correos():
         datos_tabla = grupo[['VulnerabilitySeverityLevel', 'SoftwareName', 'RecommendedSecurityUpdate']]
         tabla_html = tabulate(datos_tabla, headers='keys', tablefmt='html')
 
+        # Cuerpo del correo en formato HTML
+        contenido_html = f'<html><body><p>Detalle de la notificación:</p>{tabla_html}</body></html>'
+
         outlook = win32.Dispatch('outlook.application')
         mensaje = outlook.CreateItem(0)  # 0 significa un correo nuevo
 
         mensaje.To = correo
         mensaje.Subject = 'Problemas de updates en tu equipo'
 
-        # Cuerpo del correo en formato HTML
-        contenido_html = f'<html><body><p>Detalle de la notificación:</p>{tabla_html}</body></html>'
+        # Agregar el cuerpo del correo en formato HTML al objeto MIMEText
         mensaje.HTMLBody = contenido_html
 
         # Agregar la imagen adjunta
@@ -95,6 +99,9 @@ def enviar_correos():
         mensaje.Send()
 
         print(f"Correo enviado a: {correo}")
+
+# Resto del código...
+
 
 # Crear la interfaz gráfica
 root = tk.Tk()

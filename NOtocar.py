@@ -1,5 +1,4 @@
 import pandas as pd
-import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -8,8 +7,6 @@ import tkinter as tk
 from tkinter import ttk
 import win32com.client as win32
 import tkinter.messagebox as messagebox
-from tabulate import tabulate
-import requests
 
 # Obtener la ruta del directorio actual
 directorio_actual = os.getcwd()
@@ -17,15 +14,16 @@ directorio_actual = os.getcwd()
 # Construir la ruta relativa al archivo
 ruta_archivo = os.path.join(directorio_actual, 'Reporte_IT_Pruebas.xlsx')
 
-# Construir la ruta completa a la imagen neorisIT.jpg en la carpeta raíz del script
-ruta_imagen = 'C:/Users/matias.larenti/OneDrive - neoris.com/Desktop/Git_Codigos/infDef_python/neorisIT.jpg'
+# Construir la ruta relativa a la imagen
+ruta_imagen = os.path.join(directorio_actual, 'image001.jpg')
 
-
+'''
 # Descargar la imagen desde el enlace y guardarla localmente
 imagen_url = "https://neoris0-my.sharepoint.com/:i:/r/personal/matias_larenti_neoris_com/Documents/Pruebas_Correos/neorisIT.jpg?csf=1&web=1&e=DOirt0"
 response = requests.get(imagen_url)
 with open(ruta_imagen, 'wb') as img_file:
     img_file.write(response.content)
+'''
 
 def verificar_archivo():
     if not os.path.isfile(ruta_archivo):
@@ -94,11 +92,27 @@ def enviar_correos():
         # Agregar el cuerpo del correo en formato HTML al objeto MIMEText
         mensaje.attach(MIMEText(contenido_html, 'html'))
 
+        '''
         # Agregar la imagen adjunta
         with open(ruta_imagen, 'rb') as img_file:
             imagen_adjunta = MIMEImage(img_file.read(), _subtype='jpeg', name=os.path.basename(ruta_imagen))
         imagen_adjunta.add_header('Content-ID', '<neorisIT.jpg>')
         mensaje.attach(imagen_adjunta)
+        '''
+
+        '''
+        # Adjuntar la imagen
+        with open(ruta_imagen, 'rb') as img_file:
+            imagen_adjunta = MIMEImage(img_file.read(), _subtype='jpeg', name=os.path.basename(ruta_imagen))
+        imagen_adjunta.add_header('Content-ID', '<image001.jpg>')
+        mensaje.attach(imagen_adjunta)
+
+        # Hacer referencia a la imagen en el cuerpo del correo
+        imagen_referencia = f'<img src="cid:image001.jpg">'
+        contenido_html = contenido_html.replace('image001.jpg', imagen_referencia)
+
+        '''
+         
 
         # Enviar el correo utilizando el cliente de Outlook
         outlook = win32.Dispatch('outlook.application')
@@ -106,6 +120,20 @@ def enviar_correos():
         correo_salida.To = correo
         correo_salida.Subject = 'Problemas de updates en tu equipo'
         correo_salida.HTMLBody = contenido_html
+
+        # Adjuntar la imagen
+        correo_salida.Attachments.Add(ruta_imagen)
+
+        # Adjuntar la imagen
+        with open(ruta_imagen, 'rb') as img_file:
+            imagen_adjunta = MIMEImage(img_file.read(), _subtype='jpeg', name=os.path.basename(ruta_imagen))
+        imagen_adjunta.add_header('Content-ID', '<image001.jpg>')
+        mensaje.attach(imagen_adjunta)
+
+        # Hacer referencia a la imagen en el cuerpo del correo
+        imagen_referencia = f'<img src="cid:image001.jpg">'
+        contenido_html = contenido_html.replace('image001.jpg', imagen_referencia)
+        
         correo_salida.Send()
 
         print(f"Correo enviado a: {correo}")

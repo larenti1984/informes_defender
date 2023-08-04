@@ -2,14 +2,15 @@ import pandas as pd
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
+from email.mime.image import MIMEImage  # Asegúrate de que esta línea esté presente
 import os.path
 import tkinter as tk
 from tkinter import ttk
-import win32com.client as win32
 import tkinter.messagebox as messagebox
 from tabulate import tabulate
-import requests
+
+# Resto del código...
+
 
 # Obtener la ruta del directorio actual
 directorio_actual = os.getcwd()
@@ -18,14 +19,9 @@ directorio_actual = os.getcwd()
 ruta_archivo = os.path.join(directorio_actual, 'Reporte_IT_Pruebas.xlsx')
 
 # Construir la ruta completa a la imagen neorisIT.jpg en la carpeta raíz del script
-ruta_imagen = 'C:/Users/matias.larenti/OneDrive - neoris.com/Desktop/Git_Codigos/infDef_python/neorisIT.jpg'
-
-
-# Descargar la imagen desde el enlace y guardarla localmente
-imagen_url = "https://neoris0-my.sharepoint.com/:i:/r/personal/matias_larenti_neoris_com/Documents/Pruebas_Correos/neorisIT.jpg?csf=1&web=1&e=DOirt0"
-response = requests.get(imagen_url)
-with open(ruta_imagen, 'wb') as img_file:
-    img_file.write(response.content)
+ruta_imagen = os.path.join(directorio_actual, 'neorisIT.jpg')
+# ruta absoluta
+# ruta_imagen = 'C:/Users/matias.larenti/OneDrive - neoris.com/Desktop/Git_Codigos/infDef_python/neorisIT.jpg'
 
 def verificar_archivo():
     if not os.path.isfile(ruta_archivo):
@@ -33,7 +29,8 @@ def verificar_archivo():
         return False
     elif os.path.exists(ruta_archivo):
         try:
-            pd.read_excel(ruta_archivo).to_excel(ruta_archivo) # Intenta abrir y cerrar el archivo
+            # Verificar que el archivo se pueda leer correctamente
+            pd.read_excel(ruta_archivo)
             messagebox.showinfo("Información", "Archivo verificado correctamente.")
             return True
         except:
@@ -41,6 +38,13 @@ def verificar_archivo():
             return False
     else:
         return False
+    
+def verificar_archivo_imagen():
+    if not os.path.isfile(ruta_imagen):
+        messagebox.showerror("Error", "La imagen 'neorisIT.jpg' no existe en la ubicación especificada.")
+        return False
+    else:
+        return True
 
 def ver_informe():
     if not verificar_archivo():
@@ -61,7 +65,7 @@ def ver_informe():
     messagebox.showinfo("Informe Detallado", resumen_detallado)
 
 def enviar_correos():
-    if not verificar_archivo():
+    if not verificar_archivo() or not verificar_archivo_imagen():
         return
 
     df = pd.read_excel(ruta_archivo)
@@ -72,7 +76,6 @@ def enviar_correos():
 
     grupo_correo = df.groupby('mail')
     for correo, grupo in grupo_correo:
-        usuario = correo.split('@')[0] + '@neoris.com'
         datos_tabla = grupo[['VulnerabilitySeverityLevel', 'SoftwareName', 'RecommendedSecurityUpdate']]
 
         # Formatear la tabla como HTML utilizando tabulate
@@ -86,13 +89,28 @@ def enviar_correos():
         contenido_html = contenido_html.replace('Detalle de la notificación', tabla_html)
 
         # Crear el objeto MIMEMultipart para el correo
-        mensaje = MIMEMultipart()
+        mensaje = MIMEMultipart('alternative')
         mensaje['From'] = remitente
         mensaje['To'] = correo
         mensaje['Subject'] = 'Problemas de updates en tu equipo'
 
+        # Crear el cuerpo del correo en formato HTML
+        html_cuerpo = f"""\
+        <html>
+        <head></head>
+        <body>
+            <p>Hola,<br>
+            Aquí tienes el informe detallado:<br>
+            {contenido_html}<br>
+            <img src="cid:neorisIT.jpg"><br>
+            ¡Saludos!
+            </p>
+        </body>
+        </html>
+        """
+
         # Agregar el cuerpo del correo en formato HTML al objeto MIMEText
-        mensaje.attach(MIMEText(contenido_html, 'html'))
+        mensaje.attach(MIMEText(html_cuerpo, 'html'))
 
         # Agregar la imagen adjunta
         with open(ruta_imagen, 'rb') as img_file:
@@ -100,15 +118,16 @@ def enviar_correos():
         imagen_adjunta.add_header('Content-ID', '<neorisIT.jpg>')
         mensaje.attach(imagen_adjunta)
 
-        # Enviar el correo utilizando el cliente de Outlook
-        outlook = win32.Dispatch('outlook.application')
-        correo_salida = outlook.CreateItem(0)
-        correo_salida.To = correo
-        correo_salida.Subject = 'Problemas de updates en tu equipo'
-        correo_salida.HTMLBody = contenido_html
-        correo_salida.Send()
+        # Enviar el correo utilizando el servidor SMTP
+        try:
+            with smtplib.SMTP(servidor_smtp, puerto_smtp) as server:
+                server.starttls()
+                server.login(remitente, password)
+                server.sendmail(remitente, correo, mensaje.as_string())
+            print(f"Correo enviado a: {correo}")
+        except Exception as e:
+            print(f"Error al enviar correo a {correo}: {e}")
 
-        print(f"Correo enviado a: {correo}")
 
 # Crear la interfaz gráfica
 root = tk.Tk()
@@ -139,3 +158,4 @@ btn_enviar_correos.pack()
 
 # Iniciar la interfaz gráfica
 root.mainloop()
+

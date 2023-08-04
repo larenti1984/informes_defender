@@ -9,7 +9,6 @@ from tkinter import ttk
 import win32com.client as win32
 import tkinter.messagebox as messagebox
 from tabulate import tabulate
-import requests
 
 # Obtener la ruta del directorio actual
 directorio_actual = os.getcwd()
@@ -18,14 +17,9 @@ directorio_actual = os.getcwd()
 ruta_archivo = os.path.join(directorio_actual, 'Reporte_IT_Pruebas.xlsx')
 
 # Construir la ruta completa a la imagen neorisIT.jpg en la carpeta raíz del script
-ruta_imagen = 'C:/Users/matias.larenti/OneDrive - neoris.com/Desktop/Git_Codigos/infDef_python/neorisIT.jpg'
-
-
-# Descargar la imagen desde el enlace y guardarla localmente
-imagen_url = "https://neoris0-my.sharepoint.com/:i:/r/personal/matias_larenti_neoris_com/Documents/Pruebas_Correos/neorisIT.jpg?csf=1&web=1&e=DOirt0"
-response = requests.get(imagen_url)
-with open(ruta_imagen, 'wb') as img_file:
-    img_file.write(response.content)
+ruta_imagen = os.path.join(directorio_actual, 'neorisIT.jpg')
+# ruta absoluta
+# ruta_imagen = 'C:/Users/matias.larenti/OneDrive - neoris.com/Desktop/Git_Codigos/infDef_python/neorisIT.jpg'
 
 def verificar_archivo():
     if not os.path.isfile(ruta_archivo):
@@ -33,7 +27,8 @@ def verificar_archivo():
         return False
     elif os.path.exists(ruta_archivo):
         try:
-            pd.read_excel(ruta_archivo).to_excel(ruta_archivo) # Intenta abrir y cerrar el archivo
+            # Verificar que el archivo se pueda leer correctamente
+            pd.read_excel(ruta_archivo)
             messagebox.showinfo("Información", "Archivo verificado correctamente.")
             return True
         except:
@@ -41,6 +36,13 @@ def verificar_archivo():
             return False
     else:
         return False
+    
+def verificar_archivo_imagen():
+    if not os.path.isfile(ruta_imagen):
+        messagebox.showerror("Error", "La imagen 'neorisIT.jpg' no existe en la ubicación especificada.")
+        return False
+    else:
+        return True
 
 def ver_informe():
     if not verificar_archivo():
@@ -61,7 +63,7 @@ def ver_informe():
     messagebox.showinfo("Informe Detallado", resumen_detallado)
 
 def enviar_correos():
-    if not verificar_archivo():
+    if not verificar_archivo() or not verificar_archivo_imagen():
         return
 
     df = pd.read_excel(ruta_archivo)
@@ -70,9 +72,11 @@ def enviar_correos():
     remitente = 'matias.larenti@neoris.com'  # Cambia esto por tu dirección de correo electrónico
     password = 'Micha.6567!'  # Cambia esto por tu contraseña de correo electrónico
 
+    # Crear el objeto outlook una sola vez fuera del bucle for
+    outlook = win32.Dispatch('outlook.application')
+
     grupo_correo = df.groupby('mail')
     for correo, grupo in grupo_correo:
-        usuario = correo.split('@')[0] + '@neoris.com'
         datos_tabla = grupo[['VulnerabilitySeverityLevel', 'SoftwareName', 'RecommendedSecurityUpdate']]
 
         # Formatear la tabla como HTML utilizando tabulate
@@ -86,7 +90,7 @@ def enviar_correos():
         contenido_html = contenido_html.replace('Detalle de la notificación', tabla_html)
 
         # Crear el objeto MIMEMultipart para el correo
-        mensaje = MIMEMultipart()
+        mensaje = MIMEMultipart('related')
         mensaje['From'] = remitente
         mensaje['To'] = correo
         mensaje['Subject'] = 'Problemas de updates en tu equipo'
@@ -96,12 +100,11 @@ def enviar_correos():
 
         # Agregar la imagen adjunta
         with open(ruta_imagen, 'rb') as img_file:
-            imagen_adjunta = MIMEImage(img_file.read(), _subtype='jpeg', name=os.path.basename(ruta_imagen))
-        imagen_adjunta.add_header('Content-ID', '<neorisIT.jpg>')
-        mensaje.attach(imagen_adjunta)
+            image_part = MIMEImage(img_file.read(), _subtype='jpeg')
+        image_part.add_header('Content-ID', '<neorisIT.jpg>')
+        mensaje.attach(image_part)
 
         # Enviar el correo utilizando el cliente de Outlook
-        outlook = win32.Dispatch('outlook.application')
         correo_salida = outlook.CreateItem(0)
         correo_salida.To = correo
         correo_salida.Subject = 'Problemas de updates en tu equipo'
@@ -109,6 +112,7 @@ def enviar_correos():
         correo_salida.Send()
 
         print(f"Correo enviado a: {correo}")
+
 
 # Crear la interfaz gráfica
 root = tk.Tk()
@@ -139,3 +143,4 @@ btn_enviar_correos.pack()
 
 # Iniciar la interfaz gráfica
 root.mainloop()
+
