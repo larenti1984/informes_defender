@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk
 import win32com.client as win32
 import tkinter.messagebox as messagebox
+import os
 
 # Obtener la ruta del directorio actual
 directorio_actual = os.getcwd()
@@ -16,14 +17,6 @@ ruta_archivo = os.path.join(directorio_actual, 'Reporte_IT_Pruebas.xlsx')
 
 # Construir la ruta relativa a la imagen
 ruta_imagen = os.path.join(directorio_actual, 'image001.jpg')
-
-'''
-# Descargar la imagen desde el enlace y guardarla localmente
-imagen_url = "https://neoris0-my.sharepoint.com/:i:/r/personal/matias_larenti_neoris_com/Documents/Pruebas_Correos/neorisIT.jpg?csf=1&web=1&e=DOirt0"
-response = requests.get(imagen_url)
-with open(ruta_imagen, 'wb') as img_file:
-    img_file.write(response.content)
-'''
 
 def verificar_archivo():
     if not os.path.isfile(ruta_archivo):
@@ -66,12 +59,18 @@ def enviar_correos():
     servidor_smtp = 'smtp.office365.com'  # Cambia esto según tu proveedor de correo
     puerto_smtp = 587  # Cambia esto según tu proveedor de correo
     remitente = 'matias.larenti@neoris.com'  # Cambia esto por tu dirección de correo electrónico
-    password = 'Micha.6567!'  # Cambia esto por tu contraseña de correo electrónico
+    password =  os.environ.get('PASSWORD')# Cambia esto por tu contraseña de correo electrónico
 
     grupo_correo = df.groupby('mail')
     for correo, grupo in grupo_correo:
         usuario = correo.split('@')[0] + '@neoris.com'
         datos_tabla = grupo[['VulnerabilitySeverityLevel', 'SoftwareName', 'RecommendedSecurityUpdate']]
+
+        # Ordenar la columna 'VulnerabilitySeverityLevel'
+        datos_tabla = datos_tabla.sort_values('VulnerabilitySeverityLevel', ascending=True,
+                                              key=lambda x: pd.Categorical(x,
+                                                                           categories=['Critical', 'High', 'Medium', 'Low'],
+                                                                           ordered=True))
 
         # Formatear la tabla como HTML utilizando tabulate
         tabla_html = datos_tabla.to_html(index=False, justify='left')
@@ -92,27 +91,6 @@ def enviar_correos():
         # Agregar el cuerpo del correo en formato HTML al objeto MIMEText
         mensaje.attach(MIMEText(contenido_html, 'html'))
 
-        '''
-        # Agregar la imagen adjunta
-        with open(ruta_imagen, 'rb') as img_file:
-            imagen_adjunta = MIMEImage(img_file.read(), _subtype='jpeg', name=os.path.basename(ruta_imagen))
-        imagen_adjunta.add_header('Content-ID', '<neorisIT.jpg>')
-        mensaje.attach(imagen_adjunta)
-        '''
-
-        '''
-        # Adjuntar la imagen
-        with open(ruta_imagen, 'rb') as img_file:
-            imagen_adjunta = MIMEImage(img_file.read(), _subtype='jpeg', name=os.path.basename(ruta_imagen))
-        imagen_adjunta.add_header('Content-ID', '<image001.jpg>')
-        mensaje.attach(imagen_adjunta)
-
-        # Hacer referencia a la imagen en el cuerpo del correo
-        imagen_referencia = f'<img src="cid:image001.jpg">'
-        contenido_html = contenido_html.replace('image001.jpg', imagen_referencia)
-
-        '''
-         
 
         # Enviar el correo utilizando el cliente de Outlook
         outlook = win32.Dispatch('outlook.application')
